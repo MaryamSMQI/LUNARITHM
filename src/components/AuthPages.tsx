@@ -417,7 +417,7 @@ export const SignUpPage: React.FC = () => {
 export const SignInPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isConfigured, signInWithEmail } = useAuth();
+  const { isConfigured, signInWithEmail, showToast } = useAuth();
 
   const returnTo = (location.state as { from?: string } | null)?.from || '/';
 
@@ -426,17 +426,12 @@ export const SignInPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    if (!EMAIL_REGEX.test(email.trim())) {
-      setErrorMsg('Please enter a valid email address.');
-      return;
-    }
-    if (!password) {
-      setErrorMsg('Please enter your password.');
+    if (!EMAIL_REGEX.test(email.trim()) || !password) {
+      showToast('Continuing in Guest mode — all LUNARITHM tools are unlocked.');
+      navigate(returnTo, { replace: true });
       return;
     }
 
@@ -444,8 +439,9 @@ export const SignInPage: React.FC = () => {
     try {
       await signInWithEmail({ email, password, rememberMe });
       navigate(returnTo, { replace: true });
-    } catch (err) {
-      setErrorMsg(mapFirebaseAuthError(err));
+    } catch {
+      showToast('Continuing in Guest mode — all LUNARITHM tools are unlocked.');
+      navigate(returnTo, { replace: true });
     } finally {
       setSubmitting(false);
     }
@@ -474,16 +470,6 @@ export const SignInPage: React.FC = () => {
       title="Sign in to LUNARITHM"
       subtitle="Sign in with your email and password, or explore immediately as a Guest."
     >
-      {errorMsg && (
-        <div
-          role="alert"
-          className="rounded-lg border border-[#F25F5C]/55 bg-[#F25F5C]/10 p-3 text-xs text-[#F25F5C] flex items-start gap-2"
-        >
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="space-y-1">
           <label htmlFor="signin-email" className="block text-xs font-medium text-slate-200">
