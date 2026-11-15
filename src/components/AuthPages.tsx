@@ -78,7 +78,7 @@ const AuthCardShell: React.FC<{
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isConfigured, signUpWithEmail, showToast } = useAuth();
+  const { isConfigured, signUpWithEmail } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -150,16 +150,7 @@ export const SignUpPage: React.FC = () => {
       });
       navigate('/', { replace: true });
     } catch (err) {
-      const code =
-        typeof err === 'object' && err !== null && 'code' in err
-          ? String((err as { code?: unknown }).code)
-          : '';
-      if (code === 'auth/operation-not-allowed' || code === 'auth/unauthorized-domain') {
-        showToast('Continuing in Guest mode — all LUNARITHM tools are unlocked.');
-        navigate('/', { replace: true });
-      } else {
-        setFormError(mapFirebaseAuthError(err));
-      }
+      setFormError(mapFirebaseAuthError(err));
     } finally {
       setSubmitting(false);
     }
@@ -426,7 +417,7 @@ export const SignUpPage: React.FC = () => {
 export const SignInPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isConfigured, signInWithEmail, showToast } = useAuth();
+  const { isConfigured, signInWithEmail } = useAuth();
 
   const returnTo = (location.state as { from?: string } | null)?.from || '/';
 
@@ -439,7 +430,6 @@ export const SignInPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!EMAIL_REGEX.test(email.trim()) || !password) {
-      showToast('Continuing in Guest mode — all LUNARITHM tools are unlocked.');
       navigate(returnTo, { replace: true });
       return;
     }
@@ -449,7 +439,6 @@ export const SignInPage: React.FC = () => {
       await signInWithEmail({ email, password, rememberMe });
       navigate(returnTo, { replace: true });
     } catch {
-      showToast('Continuing in Guest mode — all LUNARITHM tools are unlocked.');
       navigate(returnTo, { replace: true });
     } finally {
       setSubmitting(false);
