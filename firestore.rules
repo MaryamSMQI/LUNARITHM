@@ -1,0 +1,160 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidRole(role) {
+      return role in [
+        'University student',
+        'University researcher / educator',
+        'Space company / lander company',
+        'Space agency',
+        'Other'
+      ];
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['name', 'email', 'role', 'organization', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'email', 'role', 'organization', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.role is string && isValidRole(data.role)
+        && data.organization is string && data.organization.size() <= 160
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPriorities(p) {
+      return p is map
+        && p.keys().hasAll(['sunlight', 'earthComms', 'continuity', 'terrainSafety', 'scienceIce'])
+        && p.keys().hasOnly(['sunlight', 'earthComms', 'continuity', 'terrainSafety', 'scienceIce'])
+        && p.sunlight is number && p.sunlight >= 0 && p.sunlight <= 100
+        && p.earthComms is number && p.earthComms >= 0 && p.earthComms <= 100
+        && p.continuity is number && p.continuity >= 0 && p.continuity <= 100
+        && p.terrainSafety is number && p.terrainSafety >= 0 && p.terrainSafety <= 100
+        && p.scienceIce is number && p.scienceIce >= 0 && p.scienceIce <= 100;
+    }
+
+    function isValidConstraints(c) {
+      return c is map
+        && c.keys().hasAll(['minSunlightPercent', 'minEarthCommsPercent', 'maxContinuousDarkHours', 'maxSlopeDeg'])
+        && c.keys().hasOnly(['minSunlightPercent', 'minEarthCommsPercent', 'maxContinuousDarkHours', 'maxSlopeDeg'])
+        && c.minSunlightPercent is number && c.minSunlightPercent >= 0 && c.minSunlightPercent <= 100
+        && c.minEarthCommsPercent is number && c.minEarthCommsPercent >= 0 && c.minEarthCommsPercent <= 100
+        && c.maxContinuousDarkHours is number && c.maxContinuousDarkHours >= 0 && c.maxContinuousDarkHours <= 1440
+        && c.maxSlopeDeg is number && c.maxSlopeDeg >= 0 && c.maxSlopeDeg <= 90;
+    }
+
+    function isValidSavedAnalysis(data) {
+      return data.keys().hasAll([
+          'ownerId', 'title', 'shared', 'missionProfileId', 'missionProfileName',
+          'winningSiteId', 'winningSiteName', 'selectedSiteId', 'landingIsoLocal',
+          'windowHours', 'priorities', 'constraints', 'rankingBasis',
+          'missingDataPolicy', 'relayBoostPct', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'title', 'shared', 'missionProfileId', 'missionProfileName',
+          'winningSiteId', 'winningSiteName', 'selectedSiteId', 'landingIsoLocal',
+          'windowHours', 'priorities', 'constraints', 'rankingBasis',
+          'missingDataPolicy', 'relayBoostPct', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.shared is bool
+        && data.missionProfileId is string && data.missionProfileId.size() >= 1 && data.missionProfileId.size() <= 80
+        && data.missionProfileName is string && data.missionProfileName.size() >= 1 && data.missionProfileName.size() <= 120
+        && (data.winningSiteId == null || (data.winningSiteId is string && data.winningSiteId.size() <= 80))
+        && data.winningSiteName is string && data.winningSiteName.size() >= 1 && data.winningSiteName.size() <= 120
+        && data.selectedSiteId is string && data.selectedSiteId.size() >= 1 && data.selectedSiteId.size() <= 80
+        && data.landingIsoLocal is string && data.landingIsoLocal.size() >= 10 && data.landingIsoLocal.size() <= 40
+        && data.windowHours is number && data.windowHours >= 24 && data.windowHours <= 1440
+        && isValidPriorities(data.priorities)
+        && isValidConstraints(data.constraints)
+        && data.rankingBasis in ['smooth_dip', 'terrain_masked']
+        && data.missingDataPolicy in ['conservative', 'neutral', 'optimistic']
+        && data.relayBoostPct is number && data.relayBoostPct >= 0 && data.relayBoostPct <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Users collection: strict owner-only read/write (no blanket reads, no listing)
+    match /users/{uid} {
+      allow get: if isSignedIn() && isValidId(uid) && request.auth.uid == uid;
+
+      allow create: if isSignedIn()
+        && isValidId(uid)
+        && request.auth.uid == uid
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && isValidId(uid)
+        && request.auth.uid == uid
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'role', 'organization', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(uid) && request.auth.uid == uid;
+    }
+
+    // Saved analyses: owner full control; shared == true readable by anyone without login
+    match /analyses/{analysisId} {
+      allow get: if isValidId(analysisId) && (
+        existing().shared == true ||
+        (isSignedIn() && existing().ownerId == request.auth.uid)
+      );
+
+      allow list: if resource.data.shared == true ||
+        (isSignedIn() && resource.data.ownerId == request.auth.uid);
+
+      allow create: if isSignedIn()
+        && isValidId(analysisId)
+        && isValidSavedAnalysis(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && isValidId(analysisId)
+        && existing().ownerId == request.auth.uid
+        && isValidSavedAnalysis(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['shared', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'shared', 'missionProfileId', 'missionProfileName',
+            'winningSiteId', 'winningSiteName', 'selectedSiteId', 'landingIsoLocal',
+            'windowHours', 'priorities', 'constraints', 'rankingBasis',
+            'missingDataPolicy', 'relayBoostPct', 'updatedAt'
+          ])
+        );
+
+      allow delete: if isSignedIn()
+        && isValidId(analysisId)
+        && existing().ownerId == request.auth.uid;
+    }
+  }
+}

@@ -190,9 +190,9 @@ export const LunarAmbientBackdrop: React.FC<LunarAmbientBackdropProps> = ({
       {/* Canvas 3-layer starfield + shooting stars */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-90" />
 
-      {/* Half-illuminated Moon limb anchored on right edge, softly dimmed behind workspace */}
+      {/* Half-illuminated Moon limb anchored on right edge, smaller in top corner on phones */}
       <div
-        className={`absolute -right-[14vw] top-[14vh] w-[62vw] max-w-[820px] min-w-[340px] aspect-video transition-opacity duration-500 ${
+        className={`absolute -right-[10vw] top-[4vh] sm:-right-[14vw] sm:top-[14vh] w-[54vw] max-w-[820px] min-w-[200px] sm:w-[62vw] sm:min-w-[340px] aspect-video transition-opacity duration-500 ${
           presentationMode ? 'opacity-10' : 'opacity-25'
         }`}
       >

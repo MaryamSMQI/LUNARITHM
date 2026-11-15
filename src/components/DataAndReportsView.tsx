@@ -416,8 +416,9 @@ export const DataAndReportsView: React.FC<DataAndReportsViewProps> = ({
   const handleCopyShareLink = () => {
     const stateObj = { landingIsoLocal, windowHours, priorities, constraints };
     const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(stateObj))));
-    const url = `${window.location.origin}${window.location.pathname}#state=${encoded}`;
-    window.history.replaceState(null, '', `#state=${encoded}`);
+    const baseHref = window.location.href.split('#')[0];
+    const url = `${baseHref}#/?state=${encoded}`;
+    window.history.replaceState(null, '', `#/?state=${encoded}`);
     navigator.clipboard?.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);

@@ -4,8 +4,8 @@
 |---|---|---|---|
 | Sun & Earth Libration Ephemeris (`astronomy-engine`) | Implemented & Verified | `DERIVED` | MIT-licensed `astronomy-engine` (`Libration`, `SunPosition`, `MoonPhase`). |
 | 3-Baseline Solar & Earth Visibility + Ranking Basis Toggle | Implemented & Verified | `DERIVED` + `SYNTHETIC` | Smooth No-Dip, Smooth (+Dip, default), and Terrain-Masked (`MEASURED` on import). |
-| Artemis III Regions, Apollo, Chang'e-4 & PSR Benchmarks | Implemented | `ESTIMATED` / `LITERATURE` / `SYNTHETIC` | Corrected Shackleton PSR (`-89.67°, 129.78°`), honest non-CLPS labels & Diviner `MISSING`. |
-| 3D Three.js Terrain & South Pole Globe + Ambient Starfield | Implemented | `DERIVED` + `SYNTHETIC` | Software-WebGL guard, `#0c0c16` obsidian palette, `motionReduced` toggle. |
+| Artemis III Regions, Apollo, Chang'e-4 & PSR Benchmarks | Implemented | `ESTIMATED` / `LITERATURE` / `SYNTHETIC` | Corrected Shackleton PSR (`-89.67°, 129.78°`), honest non-CLPS labels & Stefan-Boltzmann radiative estimate. |
+| 3D Three.js Terrain & South Pole Globe + Ambient Starfield | Implemented (Lazy Loaded) | `DERIVED` + `SYNTHETIC` | Split via `React.lazy` + `SpaceLoadingScreen`, software-WebGL guard, `#0c0c16` obsidian palette. |
 | Dual WSM + TOPSIS Ranking, Agreement & Collapsible Rejected Sites | Implemented & Verified | `DERIVED` | Honest `N/A` rules (`<2` TOPSIS, `<3` $\rho/\tau$), closest-feasible fallback, gap bars. |
 | Decision Flip Detector & Clipped Weight-Space Ternary Map | Implemented & Verified | `DERIVED` | Exact indifference thresholds, $L_1$ shift, filled Voronoi map, Flip Toast. |
 | Stability Engine (300 Scenarios) & Minimax Regret | Implemented & Verified | `DERIVED` | 4 stability lenses + Worst Scenario / Max Regret table columns. |
@@ -13,4 +13,8 @@
 | Subsystem Physics Lab (Battery, RF Link, Thermal, Pair Optimizer) | Implemented & Verified | `DERIVED` / `ESTIMATED` | Vertical vs. horizontal solar, per-step FSPL, Stefan-Boltzmann thermal, 20 km reach check. |
 | CSV Site & Horizon Mask Importer + Markdown Rationale Memo | Implemented | User CSV / Live Engine | Upgrades site horizons to `MEASURED`; exports full `.md`, `.json`, `.csv`, print card. |
 | Command Palette (`⌘K`), 10-Step Guided Demo & Undo/Redo | Implemented | Interactive UI | Synchronized 10-step walkthrough with deterministic Step 5 winner flip (`#1` flips live). |
+| HashRouter Routes, 404 Page & GitHub Pages Relative Bundle (`base: './'`) | Implemented & Verified | Routing & Static Build | `#/`, `#/about`, `#/analyses`, `#/account/analyses`, `#/account`, `#/sign-in`, `#/sign-up`, `#/forgot-password`, `#/*` 404 screen; supports both `/LUNARITHM1/` & `/LUNARITHM/` subpaths. |
+| Firebase Email/Password Accounts (No Database Persistence) | Implemented & Verified | Firebase Auth Only | Email/Password Sign Up, Sign In, Forgot Password, verification banner & resend, password update, and account deletion; no Google sign-in and no database storage of profile/analysis data. |
+| Guest Mode & Session Snapshots | Implemented & Verified | In-Memory + Stateless URLs | Zero-barrier Guest mode; session-only in-memory snapshots + stateless `#/?state=` share URLs without saving user data to Firestore or browser storage. |
+| "NASA data inside" Cards & About LUNARITHM (`#/about`) | Implemented & Verified | Reference Archives | 6 official NASA PDS / Moon Trek / SVS CGI / Artemis III cards + Alexandria, Egypt team roster with `mailto:` links. |
 | 14-Test Scientific Engine Self-Test (`src/engine/selfTestSuite.ts`) | Verified (14/14 PASS) | Automated Engine Suite | Runnable via CLI (`npx tsx`) and inside **Data & Reports → Engine Self-Test**. |

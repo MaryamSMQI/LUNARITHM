@@ -1,0 +1,161 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user account profile and mission role metadata.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "User full display name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 254,
+          "description": "Account email address"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "University student",
+            "University researcher / educator",
+            "Space company / lander company",
+            "Space agency",
+            "Other"
+          ],
+          "description": "User domain role for dashboard personalization"
+        },
+        "organization": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "Optional university, company, or agency name"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last-update timestamp"
+        }
+      },
+      "required": ["name", "email", "role", "organization", "createdAt", "updatedAt"]
+    },
+    "SavedAnalysis": {
+      "title": "SavedAnalysis",
+      "description": "Saved lunar south pole landing-site analysis configuration and top winner summary.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the document owner"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "Human-readable analysis title"
+        },
+        "shared": {
+          "type": "boolean",
+          "description": "Whether anyone with the read-only link can view this snapshot"
+        },
+        "missionProfileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "missionProfileName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "winningSiteId": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "winningSiteName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "selectedSiteId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "landingIsoLocal": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 40
+        },
+        "windowHours": {
+          "type": "number"
+        },
+        "priorities": {
+          "type": "object"
+        },
+        "constraints": {
+          "type": "object"
+        },
+        "rankingBasis": {
+          "type": "string",
+          "enum": ["smooth_dip", "terrain_masked"]
+        },
+        "missingDataPolicy": {
+          "type": "string",
+          "enum": ["conservative", "neutral", "optimistic"]
+        },
+        "relayBoostPct": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "title",
+        "shared",
+        "missionProfileId",
+        "missionProfileName",
+        "winningSiteId",
+        "winningSiteName",
+        "selectedSiteId",
+        "landingIsoLocal",
+        "windowHours",
+        "priorities",
+        "constraints",
+        "rankingBasis",
+        "missingDataPolicy",
+        "relayBoostPct",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user account profile containing PII (email) accessible only to the owning UID."
+    },
+    "/analyses/{analysisId}": {
+      "schema": { "$ref": "#/entities/SavedAnalysis" },
+      "description": "User-owned saved lunar site evaluations; publicly readable only when shared == true."
+    }
+  }
+}
