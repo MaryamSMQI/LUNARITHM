@@ -1,0 +1,6 @@
+{
+  "name": "LUNARITHM",
+  "description": "Lunar landing site evaluation, Sun/Earth horizon visibility visualizer, and mission decision-support platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
