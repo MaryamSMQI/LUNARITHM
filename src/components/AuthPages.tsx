@@ -78,7 +78,7 @@ const AuthCardShell: React.FC<{
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isConfigured, signUpWithEmail } = useAuth();
+  const { isConfigured, signUpWithEmail, showToast } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -150,7 +150,16 @@ export const SignUpPage: React.FC = () => {
       });
       navigate('/', { replace: true });
     } catch (err) {
-      setFormError(mapFirebaseAuthError(err));
+      const code =
+        typeof err === 'object' && err !== null && 'code' in err
+          ? String((err as { code?: unknown }).code)
+          : '';
+      if (code === 'auth/operation-not-allowed' || code === 'auth/unauthorized-domain') {
+        showToast('Continuing in Guest mode — all LUNARITHM tools are unlocked.');
+        navigate('/', { replace: true });
+      } else {
+        setFormError(mapFirebaseAuthError(err));
+      }
     } finally {
       setSubmitting(false);
     }

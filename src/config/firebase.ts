@@ -71,9 +71,8 @@ export function mapFirebaseAuthError(error: unknown): string {
     case 'auth/weak-password':
       return 'Password must be at least 8 characters and include a letter and a number.';
     case 'auth/operation-not-allowed':
-      return 'Email/Password sign-in is not enabled yet in Firebase Console (Authentication → Sign-in method). You can still use Guest mode right now.';
     case 'auth/unauthorized-domain':
-      return 'This domain is not yet authorized in Firebase Console (Authentication → Settings → Authorized domains). You can still use Guest mode.';
+      return 'Account sign-in is unavailable here right now — continuing in Guest mode.';
     case 'auth/requires-recent-login':
       return 'Please verify your current password before making this security update.';
     default:
