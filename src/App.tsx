@@ -17,6 +17,7 @@ import { CURATED_LUNAR_SITES } from './data/lunarSites';
 import { MISSION_PROFILES } from './data/datasetRegistry';
 import { DEFAULT_DEMO_PRESET, STEP_5_COMMS_SURGE_PRESET } from './data/demoPresets';
 import { computeInstantEphemeris, computeSubsolarLatForIso } from './engine/lunarEphemeris';
+import { computeSimpleThermalEstimate } from './engine/physicsModels';
 import { rankLunarSites } from './engine/scoringEngine';
 import { computeFlipAnalysis } from './engine/decisionIntelligence';
 import {
@@ -28,6 +29,7 @@ import {
   ProvenanceRecord,
   RankingBasis,
   StakeholderRole,
+  ThermalEstimateParams,
 } from './types/lunar';
 import { LunarAmbientBackdrop } from './components/LunarAmbientBackdrop';
 import { LunarViewport3D } from './components/LunarViewport3D';
@@ -272,6 +274,31 @@ export default function App() {
   const currentInstant = useMemo(() => {
     return computeInstantEphemeris(activeSite, currentTimestampMs, true);
   }, [activeSite, currentTimestampMs]);
+
+  const activeThermal = useMemo(() => {
+    const thermalDefaults: ThermalEstimateParams = {
+      albedo: 0.12,
+      emissivity: 0.95,
+      solarConstantWm2: 1361,
+      nightFloorTempK: 100,
+      survivalMinTempK: 150,
+    };
+    const samples = activeEval.metrics.samples;
+    const stepHours = samples.length > 1 ? samples[1].offsetHours - samples[0].offsetHours : 2;
+    const summary = computeSimpleThermalEstimate(samples, stepHours, thermalDefaults);
+    let currentTempK = thermalDefaults.nightFloorTempK;
+    if (currentInstant.sun.isVisible && currentInstant.sun.apparentAboveTerrainDeg > 0) {
+      const sinEl = Math.max(0.015, Math.sin((currentInstant.sun.apparentAboveTerrainDeg * Math.PI) / 180));
+      const num = (1 - thermalDefaults.albedo) * thermalDefaults.solarConstantWm2 * sinEl;
+      const denom = thermalDefaults.emissivity * 5.670374419e-8;
+      currentTempK = Math.max(thermalDefaults.nightFloorTempK, Math.pow(num / denom, 0.25));
+    }
+    return {
+      ...summary,
+      currentTempK: Number(currentTempK.toFixed(1)),
+      currentTempC: Number((currentTempK - 273.15).toFixed(0)),
+    };
+  }, [activeEval.metrics.samples, currentInstant]);
 
   const pushUndoSnapshot = useCallback(() => {
     setUndoStack((prev) => [...prev.slice(-19), { priorities, constraints, activeProfileId }]);
@@ -1002,34 +1029,47 @@ export default function App() {
                     <span>Thermal &amp; Surface</span>
                     <div className="flex items-center gap-1.5">
                       <DataBadge
-                        dataClass={activeSite.divinerTempRangeK ? 'MEASURED' : 'MISSING'}
+                        dataClass={activeSite.divinerTempRangeK ? 'MEASURED' : 'ESTIMATED'}
                         provenance={{
-                          id: `${activeSite.id}-diviner`,
-                          label: `${activeSite.name} — Diviner Bolometric Temperature`,
+                          id: `${activeSite.id}-thermal`,
+                          label: `${activeSite.name} — Surface Thermal & Regolith Telemetry`,
                           value: activeSite.divinerTempRangeK
                             ? `${activeSite.divinerTempRangeK[0]}–${activeSite.divinerTempRangeK[1]} K`
-                            : 'MISSING',
+                            : `${Math.round(activeThermal.minTempK)}–${Math.round(activeThermal.maxTempK)} K (Now ~${Math.round(activeThermal.currentTempK)} K)`,
                           unit: 'K',
-                          dataClass: activeSite.divinerTempRangeK ? 'MEASURED' : 'MISSING',
-                          source: 'NASA LRO Diviner DLRE (Linked — Not Yet Ingested)',
+                          dataClass: activeSite.divinerTempRangeK ? 'MEASURED' : 'ESTIMATED',
+                          source: activeSite.divinerTempRangeK
+                            ? 'NASA LRO Diviner DLRE + Site Slope/Roughness'
+                            : 'Stefan-Boltzmann Radiative Estimate (A=0.12, ε=0.95, 100 K floor); raw LRO Diviner DLRE not yet ingested',
                           processingSteps: [
-                            'LUNARITHM marks uningested Diviner bolometric temperature as MISSING.',
-                            'Use the 3D & Physics tab for the labeled Stefan-Boltzmann radiative estimate.',
+                            'Compute instantaneous and window radiative equilibrium T = [(1−A)·S·sin(el)/(ε·σ)]^(1/4) from solar elevation above terrain.',
+                            'Apply 100 K shadowed/nighttime regolith floor when Sun is below effective horizon.',
+                            'Display baseline site slope, roughness, and PSR distance alongside thermal range.',
                           ],
-                          uncertainty: 'Thermal extremes depend strongly on local slope micro-relief and albedo.',
+                          formula: 'T_eq = [ (1 - 0.12) * 1361 * max(0.015, sin(el)) / (0.95 * 5.67e-8) ]^(1/4)',
+                          uncertainty: 'Radiative estimate excludes local crater wall IR reflection and thermal inertia; import LRO Diviner data for measured bolometric T.',
                         }}
                         onInspect={setProvenanceRecord}
                       />
-                      <Thermometer className="w-3.5 h-3.5 text-[#7392B5]" />
+                      <Thermometer className="w-3.5 h-3.5 text-[#b8baff]" />
                     </div>
                   </div>
-                  <div className="text-xl font-mono font-bold text-[#F25F5C]">
+                  <div className="text-xl font-mono font-bold text-[#c9e8ff]">
                     {activeSite.divinerTempRangeK
                       ? `${activeSite.divinerTempRangeK[0]}–${activeSite.divinerTempRangeK[1]} K`
-                      : 'Diviner MISSING'}
+                      : Math.round(activeThermal.minTempK) === Math.round(activeThermal.maxTempK)
+                      ? `~${Math.round(activeThermal.minTempK)} K floor`
+                      : `${Math.round(activeThermal.minTempK)}–${Math.round(activeThermal.maxTempK)} K`}
+                    <span className="text-xs font-normal text-[#b8baff] ml-1.5">
+                      now ~{Math.round(activeThermal.currentTempK)} K
+                    </span>
                   </div>
                   <div className="text-[11px] font-mono text-[#7392B5]">
-                    Slope {activeSite.slopeDeg !== null ? `${activeSite.slopeDeg.toFixed(1)}°` : 'MISSING'} · PSR{' '}
+                    {activeThermal.currentTempC >= 0 ? `+${activeThermal.currentTempC}` : activeThermal.currentTempC}°C now · Mean {Math.round(activeThermal.meanTempK)} K · &lt;150 K: {activeThermal.hoursBelowSurvival}h
+                  </div>
+                  <div className="text-[11px] font-mono text-[#7392B5]">
+                    Slope {activeSite.slopeDeg !== null ? `${activeSite.slopeDeg.toFixed(1)}°` : 'N/A'} · Rough{' '}
+                    {activeSite.roughnessM !== null ? `${activeSite.roughnessM.toFixed(1)} m` : 'N/A'} · PSR{' '}
                     {activeSite.psrProximityKm} km
                   </div>
                 </div>
